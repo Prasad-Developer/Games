@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" id="theme-meta" content="#0d0d0d" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="SNAKE" />
+  <title>SNAKE</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d0d0d;
+      --surface:   #1a1a1a;
+      --border:    #2a2a2a;
+      --snake:     #00e676;
+      --snake-head:#69ff47;
+      --food:      #ff3d5a;
+      --text:      #f0f0f0;
+      --text-dim:  #666;
+      --accent:    #00e676;
+      --btn-bg:    #1f1f1f;
+      --btn-hover: #2a2a2a;
+      --score-bg:  #111;
+    }
+
+    [data-theme="light"] {
+      --bg:        #f2f2f2;
+      --surface:   #ffffff;
+      --border:    #d8d8d8;
+      --snake:     #00a84f;
+      --snake-head:#00c45c;
+      --food:      #ff3d5a;
+      --text:      #111111;
+      --text-dim:  #999;
+      --accent:    #00a84f;
+      --btn-bg:    #e8e8e8;
+      --btn-hover: #ddd;
+      --score-bg:  #eaeaea;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Chakra Petch', monospace;
+      transition: background 0.25s, color 0.25s;
+      overflow: hidden;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 16px;
+      gap: 14px;
+    }
+
+    /* ── Header ── */
+    header {
+      width: 100%;
+      max-width: 420px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: 0.25em;
+      color: var(--accent);
+    }
+
+    .theme-btn {
+      background: var(--btn-bg);
+      border: 1.5px solid var(--border);
+      color: var(--text);
+      width: 38px; height: 38px;
+      cursor: pointer;
+      font-size: 1.1rem;
+      display: grid; place-items: center;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .theme-btn:hover { background: var(--btn-hover); }
+
+    /* ── Score Bar ── */
+    .score-bar {
+      width: 100%;
+      max-width: 420px;
+      background: var(--score-bg);
+      border: 1.5px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 16px;
+    }
+
+    .score-item { display: flex; flex-direction: column; gap: 2px; }
+    .score-label { font-size: 0.6rem; letter-spacing: 0.2em; color: var(--text-dim); text-transform: uppercase; }
+    .score-value { font-size: 1.2rem; font-weight: 700; color: var(--text); }
+    #score-val  { color: var(--accent); }
+
+    /* ── Canvas Wrapper ── */
+    .canvas-wrap {
+      position: relative;
+      border: 2px solid var(--border);
+      background: var(--surface);
+      line-height: 0;
+    }
+
+    canvas { display: block; }
+
+    /* ── Overlay ── */
+    .overlay {
+      position: absolute; inset: 0;
+      background: rgba(0,0,0,0.82);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 18px;
+      transition: opacity 0.2s;
+    }
+    [data-theme="light"] .overlay { background: rgba(255,255,255,0.88); }
+    .overlay.hidden { opacity: 0; pointer-events: none; }
+
+    .overlay-title {
+      font-size: 1.8rem; font-weight: 700;
+      letter-spacing: 0.15em;
+      color: var(--accent);
+    }
+    .overlay-sub {
+      font-size: 0.75rem; letter-spacing: 0.1em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      text-align: center;
+      line-height: 1.8;
+    }
+    .overlay-score {
+      font-size: 3rem; font-weight: 700;
+      color: var(--text);
+      line-height: 1;
+    }
+    .overlay-score span { font-size: 0.8rem; color: var(--text-dim); display: block; margin-top: 4px; text-align: center; }
+
+    .play-btn {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      padding: 12px 36px;
+      font-family: 'Chakra Petch', monospace;
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .play-btn:hover { opacity: 0.88; }
+    .play-btn:active { transform: scale(0.97); }
+
+    /* ── Touch Controls ── */
+    .touch-pad {
+      display: none;
+      width: 100%;
+      max-width: 420px;
+    }
+
+    @media (pointer: coarse) {
+      .touch-pad { display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 6px; }
+    }
+
+    .d-btn {
+      background: var(--btn-bg);
+      border: 1.5px solid var(--border);
+      color: var(--text);
+      height: 44px;
+      font-size: 1.2rem;
+      display: grid; place-items: center;
+      cursor: pointer;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.1s;
+      touch-action: manipulation;
+    }
+    .d-btn:active { background: var(--accent); color: #000; }
+    .d-up    { grid-column: 2; grid-row: 1; }
+    .d-left  { grid-column: 1; grid-row: 2; }
+    .d-down  { grid-column: 2; grid-row: 2; }
+    .d-right { grid-column: 3; grid-row: 2; }
+
+    /* ── Speed Badge ── */
+    .speed-badge {
+      display: flex; gap: 4px; align-items: center;
+    }
+    .speed-pip {
+      width: 8px; height: 8px;
+      background: var(--border);
+      transition: background 0.2s;
+    }
+    .speed-pip.on { background: var(--accent); }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">SNAKE</div>
+    <button class="theme-btn" id="themeBtn" title="Toggle theme">☀️</button>
+  </header>
+
+  <div class="score-bar">
+    <div class="score-item">
+      <span class="score-label">Score</span>
+      <span class="score-value" id="score-val">0</span>
+    </div>
+    <div class="score-item" style="align-items:center">
+      <span class="score-label">Speed</span>
+      <div class="speed-badge" id="speed-pips">
+        <div class="speed-pip on"></div>
+        <div class="speed-pip"></div>
+        <div class="speed-pip"></div>
+        <div class="speed-pip"></div>
+        <div class="speed-pip"></div>
+      </div>
+    </div>
+    <div class="score-item" style="align-items:flex-end">
+      <span class="score-label">Best</span>
+      <span class="score-value" id="best-val">0</span>
+    </div>
+  </div>
+
+  <div class="canvas-wrap" id="canvasWrap">
+    <canvas id="gameCanvas"></canvas>
+
+    <div class="overlay" id="overlay">
+      <div class="overlay-title" id="ol-title">SNAKE</div>
+      <div class="overlay-score hidden" id="ol-score">0 <span>POINTS</span></div>
+      <div class="overlay-sub" id="ol-sub">
+        USE ARROW KEYS OR WASD<br/>TO CONTROL THE SNAKE
+      </div>
+      <button class="play-btn" id="startBtn">▶ START</button>
+    </div>
+  </div>
+
+  <div class="touch-pad">
+    <button class="d-btn d-up"    data-dir="UP">▲</button>
+    <button class="d-btn d-left"  data-dir="LEFT">◀</button>
+    <button class="d-btn d-down"  data-dir="DOWN">▼</button>
+    <button class="d-btn d-right" data-dir="RIGHT">▶</button>
+  </div>
+
+<script>
+// ── Constants ──────────────────────────────────────────────
+const COLS = 20, ROWS = 20;
+const SPEEDS = [160, 130, 105, 85, 68]; // ms per tick
+
+// ── State ──────────────────────────────────────────────────
+let snake, dir, nextDir, food, score, best, running, dead, tick, speedLevel;
+
+// ── Canvas Setup ───────────────────────────────────────────
+const canvas = document.getElementById('gameCanvas');
+const ctx    = canvas.getContext('2d');
+const wrap   = document.getElementById('canvasWrap');
+
+function resize() {
+  const maxW = Math.min(window.innerWidth - 32, 420);
+  const cell = Math.floor(maxW / COLS);
+  const W = cell * COLS;
+  canvas.width  = W;
+  canvas.height = W;
+  canvas.style.width  = W + 'px';
+  canvas.style.height = W + 'px';
+  if (running || dead) draw();
+}
+
+// ── CSS Variable helper ────────────────────────────────────
+function css(v) {
+  return getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+}
+
+// ── Draw ───────────────────────────────────────────────────
+function draw() {
+  const cell = canvas.width / COLS;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Grid lines (subtle)
+  ctx.strokeStyle = css('--border');
+  ctx.lineWidth = 0.5;
+  for (let x = 0; x <= COLS; x++) {
+    ctx.beginPath(); ctx.moveTo(x*cell, 0); ctx.lineTo(x*cell, canvas.height); ctx.stroke();
+  }
+  for (let y = 0; y <= ROWS; y++) {
+    ctx.beginPath(); ctx.moveTo(0, y*cell); ctx.lineTo(canvas.width, y*cell); ctx.stroke();
+  }
+
+  // Food
+  const gap = Math.max(2, cell * 0.12);
+  ctx.fillStyle = css('--food');
+  ctx.fillRect(food.x*cell+gap, food.y*cell+gap, cell-gap*2, cell-gap*2);
+
+  // Snake body
+  snake.forEach((seg, i) => {
+    const isHead = i === 0;
+    ctx.fillStyle = isHead ? css('--snake-head') : css('--snake');
+    const g = isHead ? gap * 0.6 : gap;
+    ctx.fillRect(seg.x*cell+g, seg.y*cell+g, cell-g*2, cell-g*2);
+
+    // Eyes on head
+    if (isHead) {
+      ctx.fillStyle = css('--bg');
+      const ew = Math.max(2, cell * 0.12);
+      const eh = ew;
+      const ex1 = seg.x*cell + cell*0.28, ex2 = seg.x*cell + cell*0.62;
+      const ey  = seg.y*cell + cell*0.3;
+      if (dir.x === 0) {
+        ctx.fillRect(ex1, ey, ew, eh);
+        ctx.fillRect(ex2, ey, ew, eh);
+      } else {
+        const eyY1 = seg.y*cell + cell*0.28, eyY2 = seg.y*cell + cell*0.6;
+        const eyX  = dir.x > 0 ? seg.x*cell + cell*0.62 : seg.x*cell + cell*0.2;
+        ctx.fillRect(eyX, eyY1, ew, eh);
+        ctx.fillRect(eyX, eyY2, ew, eh);
+      }
+    }
+  });
+}
+
+// ── Game Logic ─────────────────────────────────────────────
+function randFood() {
+  let pos;
+  do {
+    pos = { x: Math.floor(Math.random()*COLS), y: Math.floor(Math.random()*ROWS) };
+  } while (snake.some(s => s.x === pos.x && s.y === pos.y));
+  return pos;
+}
+
+function init() {
+  const midX = Math.floor(COLS/2), midY = Math.floor(ROWS/2);
+  snake   = [{ x: midX, y: midY }, { x: midX-1, y: midY }, { x: midX-2, y: midY }];
+  dir     = { x: 1, y: 0 };
+  nextDir = { x: 1, y: 0 };
+  score   = 0;
+  speedLevel = 0;
+  food    = randFood();
+  dead    = false;
+  running = false;
+  updateUI();
+  draw();
+}
+
+function step() {
+  if (!running) return;
+  dir = { ...nextDir };
+  const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+
+  // Wall collision
+  if (head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS) return gameOver();
+  // Self collision
+  if (snake.some(s => s.x === head.x && s.y === head.y)) return gameOver();
+
+  snake.unshift(head);
+
+  if (head.x === food.x && head.y === food.y) {
+    score += 10 * (speedLevel + 1);
+    if (score > best) { best = score; localStorage.setItem('snakeBest', best); }
+    food = randFood();
+    // Speed up every 50 pts
+    speedLevel = Math.min(SPEEDS.length-1, Math.floor(score / 50));
+    reschedule();
+  } else {
+    snake.pop();
+  }
+
+  updateUI();
+  draw();
+}
+
+function reschedule() {
+  clearInterval(tick);
+  tick = setInterval(step, SPEEDS[speedLevel]);
+}
+
+function gameOver() {
+  running = false; dead = true;
+  clearInterval(tick);
+  draw();
+  showOverlay('GAME OVER', score, 'TAP TO PLAY AGAIN', 'RESTART');
+}
+
+function updateUI() {
+  document.getElementById('score-val').textContent = score;
+  document.getElementById('best-val').textContent  = best;
+  const pips = document.querySelectorAll('.speed-pip');
+  pips.forEach((p, i) => p.classList.toggle('on', i <= speedLevel));
+}
+
+// ── Overlay helpers ────────────────────────────────────────
+function showOverlay(title, sc, sub, btnText) {
+  const ol = document.getElementById('overlay');
+  ol.classList.remove('hidden');
+  document.getElementById('ol-title').textContent = title;
+  document.getElementById('ol-sub').innerHTML = sub;
+  document.getElementById('startBtn').textContent = '▶ ' + btnText;
+  const olScore = document.getElementById('ol-score');
+  if (sc !== null) {
+    olScore.innerHTML = sc + '<span>POINTS</span>';
+    olScore.classList.remove('hidden');
+  } else {
+    olScore.classList.add('hidden');
+  }
+}
+
+function hideOverlay() {
+  document.getElementById('overlay').classList.add('hidden');
+}
+
+// ── Controls ───────────────────────────────────────────────
+const keyMap = {
+  ArrowUp:'UP', ArrowDown:'DOWN', ArrowLeft:'LEFT', ArrowRight:'RIGHT',
+  w:'UP', s:'DOWN', a:'LEFT', d:'RIGHT',
+  W:'UP', S:'DOWN', A:'LEFT', D:'RIGHT'
+};
+const dirMap = {
+  UP:    { x: 0, y:-1 }, DOWN:  { x: 0, y: 1 },
+  LEFT:  { x:-1, y: 0 }, RIGHT: { x: 1, y: 0 }
+};
+const opposites = { UP:'DOWN', DOWN:'UP', LEFT:'RIGHT', RIGHT:'LEFT' };
+
+function setDir(d) {
+  if (!running) return;
+  const nd = dirMap[d];
+  const cur = dir.x === -dirMap[d].x && dir.y === -dirMap[d].y;
+  if (!cur) nextDir = nd;
+}
+
+document.addEventListener('keydown', e => {
+  const d = keyMap[e.key];
+  if (d) { e.preventDefault(); setDir(d); }
+  if (e.key === ' ') { e.preventDefault(); handleStart(); }
+});
+
+document.querySelectorAll('.d-btn').forEach(btn => {
+  btn.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    setDir(btn.dataset.dir);
+  });
+});
+
+// Swipe
+let swipeStart = null;
+canvas.addEventListener('touchstart', e => {
+  swipeStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+}, { passive: true });
+canvas.addEventListener('touchend', e => {
+  if (!swipeStart) return;
+  const dx = e.changedTouches[0].clientX - swipeStart.x;
+  const dy = e.changedTouches[0].clientY - swipeStart.y;
+  if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+  if (Math.abs(dx) > Math.abs(dy)) setDir(dx > 0 ? 'RIGHT' : 'LEFT');
+  else setDir(dy > 0 ? 'DOWN' : 'UP');
+  swipeStart = null;
+}, { passive: true });
+
+// ── Start / Restart ────────────────────────────────────────
+function handleStart() {
+  if (!running && !dead) { // fresh start
+    hideOverlay();
+    running = true;
+    reschedule();
+  } else if (dead) { // restart after game over
+    clearInterval(tick);
+    init();
+    hideOverlay();
+    running = true;
+    reschedule();
+  }
+}
+
+document.getElementById('startBtn').addEventListener('click', handleStart);
+
+// ── Theme Toggle ───────────────────────────────────────────
+const themeBtn  = document.getElementById('themeBtn');
+const themeMeta = document.getElementById('theme-meta');
+
+function applyTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  themeBtn.textContent = t === 'dark' ? '☀️' : '🌙';
+  themeMeta.setAttribute('content', t === 'dark' ? '#0d0d0d' : '#f2f2f2');
+  localStorage.setItem('snakeTheme', t);
+  if (running || dead) draw();
+}
+
+themeBtn.addEventListener('click', () => {
+  applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+});
+
+// ── Init ───────────────────────────────────────────────────
+best = parseInt(localStorage.getItem('snakeBest') || '0');
+applyTheme(localStorage.getItem('snakeTheme') || 'dark');
+resize();
+init();
+showOverlay('SNAKE', null, 'USE ARROW KEYS, WASD<br/>OR SWIPE TO MOVE', 'START');
+window.addEventListener('resize', resize);
+
+// ── Service Worker ─────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
